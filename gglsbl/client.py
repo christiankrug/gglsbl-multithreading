@@ -21,7 +21,7 @@ class SafeBrowsingList(object):
     """
 
     def __init__(self, api_key, db_path='/tmp/gsb_v4.db',
-                 discard_fair_use_policy=False, platforms=None, timeout=10):
+                 discard_fair_use_policy=False, platforms=None, threat_types=None, timeout=10):
         """Constructor.
 
         Args:
@@ -34,6 +34,7 @@ class SafeBrowsingList(object):
         self.api_client = SafeBrowsingApiClient(api_key, discard_fair_use_policy=discard_fair_use_policy)
         self.storage = SqliteStorage(db_path, timeout=timeout)
         self.platforms = platforms
+        self.threat_types = threat_types
 
     def _verify_threat_list_checksum(self, threat_list, remote_checksum):
         local_checksum = self.storage.hash_prefix_list_checksum(threat_list)
@@ -58,7 +59,7 @@ class SafeBrowsingList(object):
         threat_lists = self.api_client.get_threats_lists()
         for entry in threat_lists:
             threat_list = ThreatList.from_api_entry(entry)
-            if self.platforms is None or threat_list.platform_type in self.platforms:
+            if (self.platforms is None or threat_list.platform_type in self.platforms) and (self.threat_types is None or threat_list.threat_type in self.threat_types):
                 self.storage.add_threat_list(threat_list)
                 try:
                     del threat_lists_to_remove[repr(threat_list)]
