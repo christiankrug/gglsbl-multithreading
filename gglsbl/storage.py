@@ -70,7 +70,7 @@ class SqliteStorage(object):
         self.db_path = db_path
         do_init_db = not os.path.isfile(db_path)
         log.info('Opening SQLite DB {}'.format(db_path))
-        self.db = sqlite3.connect(db_path, timeout)
+        self.db = sqlite3.connect(db_path, timeout, check_same_thread=False)
         if do_init_db:
             log.info('SQLite DB does not exist, initializing')
             self.init_db()
@@ -78,7 +78,7 @@ class SqliteStorage(object):
             log.warning("Cache schema is not compatible with this library version. Re-creating sqlite DB %s", db_path)
             self.db.close()
             os.unlink(db_path)
-            self.db = sqlite3.connect(db_path, timeout)
+            self.db = sqlite3.connect(db_path, timeout, check_same_thread=False)
             self.init_db()
         self.db.cursor().execute('PRAGMA synchronous = 0')
         self.db.cursor().execute('PRAGMA journal_mode = WAL')
