@@ -22,6 +22,9 @@ from base64 import b64encode
 try:
     from googleapiclient.discovery import build
     from googleapiclient.errors import HttpError
+    from googleapiclient import discovery
+    import googleapiclient
+    import httplib2
 except ImportError:
     from apiclient.discovery import build
     from apiclient.errors import HttpError
@@ -38,6 +41,11 @@ log.addHandler(logging.NullHandler())
 
 
 _fail_count = 0
+
+# Overwrite googleapiclient function, Create a new Http() object for every request
+def build_request(http, *args, **kwargs):
+  new_http = httplib2.Http()
+  return googleapiclient.http.HttpRequest(new_http, *args, **kwargs)
 
 
 def autoretry(func):
@@ -78,7 +86,7 @@ class SafeBrowsingApiClient(object):
         self.discard_fair_use_policy = discard_fair_use_policy
         if self.discard_fair_use_policy:
             log.warn('Circumventing request frequency throttling is against Safe Browsing API policy.')
-        self.service = build('safebrowsing', 'v4', developerKey=developer_key, cache_discovery=False)
+        self.service = build('safebrowsing', 'v4', developerKey=developer_key, cache_discovery=False, requestBuilder=build_request)
         self.next_threats_update_req_no_sooner_than = None
         self.next_full_hashes_req_no_sooner_than = None
 
