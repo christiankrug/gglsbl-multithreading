@@ -20,18 +20,18 @@ class SafeBrowsingList(object):
     https://developers.google.com/safe-browsing/v4/
     """
 
-    def __init__(self, api_key, db_path='/tmp/gsb_v4.db',
+    def __init__(self, api_keys, db_path='/tmp/gsb_v4.db',
                  discard_fair_use_policy=False, platforms=None, threat_types=None, timeout=10):
         """Constructor.
 
         Args:
-            api_key: string, a key for API authentication.
+            api_keys: array, keys for API authentication.
             db_path: string, path to SQLite DB file to store cached data.
             discard_fair_use_policy: boolean, disable request frequency throttling (only for testing).
             platforms: list, threat lists to look up, default includes all platforms.
             timeout: seconds to wait for Sqlite DB to become unlocked from concurrent WRITE transaction.
         """
-        self.api_client = SafeBrowsingApiClient(api_key, discard_fair_use_policy=discard_fair_use_policy)
+        self.api_client = SafeBrowsingApiClient(api_keys, discard_fair_use_policy=discard_fair_use_policy)
         self.storage = SqliteStorage(db_path, timeout=timeout)
         self.platforms = platforms
         self.threat_types = threat_types

@@ -47,6 +47,11 @@ def build_request(http, *args, **kwargs):
   new_http = httplib2.Http()
   return googleapiclient.http.HttpRequest(new_http, *args, **kwargs)
 
+def build_services(developer_keys):
+    services = []
+    for developer_key in developer_keys:
+        services.append(build('safebrowsing', 'v4', developerKey=developer_key, cache_discovery=False, requestBuilder=build_request))
+    return services
 
 def autoretry(func):
     @wraps(func)
@@ -74,11 +79,11 @@ def autoretry(func):
 
 
 class SafeBrowsingApiClient(object):
-    def __init__(self, developer_key, client_id='python-gglsbl',
+    def __init__(self, developer_keys, client_id='python-gglsbl',
                  client_version=__version__, discard_fair_use_policy=True):
         """Constructor.
 
-        :param developer_key: Google API key
+        :param developer_keys: Google API keys
         :param discard_fair_use_policy: do not wait between individual API calls as requested by the spec
         """
         self.client_id = client_id
@@ -86,7 +91,8 @@ class SafeBrowsingApiClient(object):
         self.discard_fair_use_policy = discard_fair_use_policy
         if self.discard_fair_use_policy:
             log.warn('Circumventing request frequency throttling is against Safe Browsing API policy.')
-        self.service = build('safebrowsing', 'v4', developerKey=developer_key, cache_discovery=False, requestBuilder=build_request)
+        self.services = build_services(developer_keys)
+        self.currentService = 0
         self.next_threats_update_req_no_sooner_than = None
         self.next_full_hashes_req_no_sooner_than = None
 
@@ -98,6 +104,10 @@ class SafeBrowsingApiClient(object):
             return None
         return time.time() + float(minimum_wait_duration.rstrip('s'))
 
+    def get_service(self):
+        self.currentService = (self.currentService + 1) % len(self.services)
+        return self.services[self.currentService]
+
     @staticmethod
     def fair_use_delay(next_request_no_sooner_than):
         if next_request_no_sooner_than is not None:
@@ -108,7 +118,7 @@ class SafeBrowsingApiClient(object):
     @autoretry
     def get_threats_lists(self):
         """Retrieve all available threat lists"""
-        response = self.service.threatLists().list().execute()
+        response = self.get_service().threatLists().list().execute()
         return response['threatLists']
 
     def get_threats_update(self, client_state):
@@ -140,7 +150,7 @@ class SafeBrowsingApiClient(object):
         @autoretry
         def _get_threats_update():
             nonlocal self, request_body
-            res = self.service.threatListUpdates().fetch(body=request_body).execute()
+            res = self.get_service().threatListUpdates().fetch(body=request_body).execute()
             self.next_threats_update_req_no_sooner_than = self.get_wait_duration(res)
             return res['listUpdateResponses']
 
@@ -179,7 +189,7 @@ class SafeBrowsingApiClient(object):
         @autoretry
         def _get_full_hashes():
             nonlocal self, request_body
-            res = self.service.fullHashes().find(body=request_body).execute()
+            res = self.get_service().fullHashes().find(body=request_body).execute()
             self.next_full_hashes_req_no_sooner_than = self.get_wait_duration(res)
             return res
 
