@@ -118,7 +118,7 @@ class SafeBrowsingList(object):
         for prefix_value in hash_prefixes:
             self.storage.update_hash_prefix_expiration(prefix_value, negative_cache_duration)
 
-    def lookup_url(self, url):
+    def lookup_url(self, url, iteration=0):
         """Look up specified URL in Safe Browsing threat lists."""
         if type(url) is not str:
             url = url.encode('utf8')
@@ -128,9 +128,13 @@ class SafeBrowsingList(object):
         try:
             list_names = self._lookup_hashes(url_hashes)
             self.storage.commit()
-        except Exception:
+        except Exception as e:
             self.storage.rollback()
-            raise
+            if iteration < 1:
+                log.warning("Exception while looking up URL, trying again. "+str(e))
+                return self.lookup_url(url, iteration=iteration+1)
+            else:
+                raise
         if list_names:
             return list_names
         return None

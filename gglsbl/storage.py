@@ -312,7 +312,7 @@ class SqliteStorage(object):
 
     def populate_hash_prefix_list(self, threat_list, hash_prefix_list):
         log.info('Storing {} entries of hash prefix list {}'.format(len(hash_prefix_list), str(threat_list)))
-        q = '''INSERT INTO hash_prefix
+        q = '''INSERT OR REPLACE INTO hash_prefix
                     (value, cue, threat_type, platform_type, threat_entry_type, timestamp)
                 VALUES
                     (?, ?, ?, ?, ?, current_timestamp)

@@ -152,6 +152,9 @@ class SafeBrowsingApiClient(object):
             nonlocal self, request_body
             res = self.get_service().threatListUpdates().fetch(body=request_body).execute()
             self.next_threats_update_req_no_sooner_than = self.get_wait_duration(res)
+            if 'listUpdateResponses' not in res:
+                logging.warning("Did not get a list update response back. Looks like we are getting throttled. No update for now. "+str(res))
+                return []
             return res['listUpdateResponses']
 
         return _get_threats_update()
